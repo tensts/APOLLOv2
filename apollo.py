@@ -1,3 +1,4 @@
+#!venv/bin/python
 '''
 --------------------------------------------------------------------------------
       Copyright (c) 2018-2020 Sarah Edwards (Station X Labs, LLC, 
@@ -125,7 +126,7 @@ def gatherios(database_names):
                     if f == "db":
                         pass
                     else:
-                        line_escape = line.replace(" ", "\ ")
+                        line_escape = line.replace(" ", "\\ ")
                         output = tmpdir + splitline[0]
                         if not os.path.exists(output):
                             os.makedirs(output)
