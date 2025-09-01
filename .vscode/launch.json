@@ -1,0 +1,39 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python Debugger: itunes get",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/apollo.py",
+      "console": "integratedTerminal",
+      "args": [
+        "gather_itunes",
+        "modules/",
+        "/mnt/itunes/391e962681972d5625fc3574e112a4bdae603550"
+      ]
+    },
+    {
+      "name": "Python Debugger: itunes extract",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/apollo.py",
+      "console": "integratedTerminal",
+      "args": [
+        "extract",
+        "-k",
+        "-o",
+        "csv",
+        "-p",
+        "apple",
+        "-v",
+        "yolo",
+        "modules/",
+        "tmp_apollo/"
+      ]
+    }
+  ]
+}
