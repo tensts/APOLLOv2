@@ -1,7 +1,7 @@
 #!venv/bin/python
 '''
 --------------------------------------------------------------------------------
-      Copyright (c) 2018-2020 Sarah Edwards (Station X Labs, LLC, 
+      Copyright (c) 2018-2020 Sarah Edwards (Station X Labs, LLC,
       @iamevltwin, mac4n6.com). All rights reserved.
 
       This software is provided "as is," without warranty of any kind,
@@ -24,19 +24,19 @@
       2. Redistributions in binary form must reproduce the above copyright
          notice, disclaimer, and this list of conditions in the documenta-
          tion and/or other materials provided with the distribution.
-      3. All advertising, training, and documentation materials mentioning 
-         features or use of this software must display the following 
-         acknowledgment. Character-limited social media may abbreviate this 
-         acknowledgment to include author and APOLLO name ie: "This new 
-         feature brought to you by @iamevltwin's APOLLO". Please make an 
+      3. All advertising, training, and documentation materials mentioning
+         features or use of this software must display the following
+         acknowledgment. Character-limited social media may abbreviate this
+         acknowledgment to include author and APOLLO name ie: "This new
+         feature brought to you by @iamevltwin's APOLLO". Please make an
          effort credit the appropriate authors on specific APOLLO modules.
-         The spirit of this clause is to give public acknowledgment to 
+         The spirit of this clause is to give public acknowledgment to
          researchers where credit is due.
 
-            This product includes software developed by Sarah Edwards 
-            (Station X Labs, LLC, @iamevltwin, mac4n6.com) and other 
-            contributors as part of APOLLO (Apple Pattern of Life Lazy 
-            Output'er). 
+            This product includes software developed by Sarah Edwards
+            (Station X Labs, LLC, @iamevltwin, mac4n6.com) and other
+            contributors as part of APOLLO (Apple Pattern of Life Lazy
+            Output'er).
 
 
       LICENSE 2 (GNU GPL v3 or later):
@@ -93,6 +93,88 @@ def gathermacos(database_names):
                         shutil.copyfile(os.path.join(
                             root, f), os.getcwd() + "/tmp_apollo" + root + "/"+f)
     chown_chmod()
+
+
+def gather_itunes_backup(database_names):
+    print('ready2go')
+    tempdir()
+    tmpdir = os.getcwd() + "/tmp_apollo"
+    print(f"...Finding files  in iTunes backup dir {data_dir}")
+    try:
+        find_process = subprocess.Popen(['find', data_dir, '-type', 'f', '-iname', '*.db'],
+                                        stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        encoding='utf8')
+        out, err = find_process.communicate()
+
+        if find_process.returncode != 0:
+            if not err:
+                err = f"[-] Command failed with return code {find_process.returncode}"
+            raise subprocess.CalledProcessError(
+                find_process.returncode,
+                find_process.args,
+                output=out,
+                stderr=err
+            )
+
+    except (subprocess.CalledProcessError, FileNotFoundError, Exception) as e:
+        print(f"[-] Error: {e}")
+        return False
+
+    print("...Writing itunes_files.txt...")
+    with open(tmpdir + '/itunes_files.txt', 'w') as file:
+        file.write(out)
+
+    if ignore_dir:
+        with open(tmpdir + '/itunes_files.txt', 'r') as file:
+            lines = file.readlines()
+        with open(tmpdir + '/itunes_files.txt', "w") as file:
+            for line in lines:
+                if not any(ignored in line.strip("\n") for ignored in ignore_dir):
+                    file.write(line)
+
+    print("...Searching for and copying databases into tmp_apollo...")
+    with open(tmpdir + '/itunes_files.txt', 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            splitline = line.rsplit("/", 1)
+            if len(splitline) < 2:
+                continue
+
+            filename = splitline[1]
+            if filename.startswith(tuple(database_names)):
+                # e.g. db1.sqlite -> db1
+                db_name = filename.split(".")[0]
+                output_path = os.path.join(tmpdir, db_name)
+                try:
+                    os.makedirs(output_path, exist_ok=True)
+                    shutil.copy(line, output_path)
+                except (FileNotFoundError, PermissionError, Exception) as e:
+                    print(f"[-] Error: {e}")
+                    continue
+
+            # for f in database_names:
+            #     if len(splitline) >= 2 and splitline[1].startswith(f):
+            #         if f == "db":
+            #             pass
+            #         else:
+            #             line_escape = line.replace(" ", "\\ ")
+            #             output_path = tmpdir + splitline[0]
+            #             if not os.path.exists(output_path):
+            #                 os.makedirs(output_path)
+            #             try:
+            #                 shutil.copy(line_escape, output_path)
+            #             except (FileNotFoundError, PermissionError, Exception) as e:
+            #                 print(f"[-] Error: {e}")
+            #                 continue
+
+    chown_chmod()
+    return True
 
 
 def gatherios(database_names):
@@ -356,16 +438,18 @@ def parse_module_definition(mod_info):
         gathermacos(database_names)
     elif subparser == 'gather_ios':
         gatherios(database_names)
+    elif subparser == 'gather_itunes':
+        gather_itunes_backup(database_names)
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="\
-	Apple Pattern of Life Lazy Outputter (APOLLO)\
-	\n\nVery lazy parser to extract pattern-of-life data from SQLite databases on iOS/macOS/Android/Windows datasets (though really any SQLite database if you make a configuration file and provide it the proper metadata details.\
-	\n\nOutputs include SQLite Database (with JSON or '|' Delimited) or Tab Delimited CSV.\
-	\n\nYolo! Meant to run on anything and everything, like a honey badger - it don't care. Can be used with multiple dumps of devices. It will run all queries in all modules with no regard for versioning. May lead to redundant data since it can run more than one similar query. Be careful with this option.\
-	\n\tAuthor: Sarah Edwards | @iamevltwin | mac4n6.com", prog='apollo.py', formatter_class=RawTextHelpFormatter)
+        Apple Pattern of Life Lazy Outputter (APOLLO)\
+        \n\nVery lazy parser to extract pattern-of-life data from SQLite databases on iOS/macOS/Android/Windows datasets (though really any SQLite database if you make a configuration file and provide it the proper metadata details.\
+        \n\nOutputs include SQLite Database (with JSON or '|' Delimited) or Tab Delimited CSV.\
+        \n\nYolo! Meant to run on anything and everything, like a honey badger - it don't care. Can be used with multiple dumps of devices. It will run all queries in all modules with no regard for versioning. May lead to redundant data since it can run more than one similar query. Be careful with this option.\
+        \n\tAuthor: Sarah Edwards | @iamevltwin | mac4n6.com", prog='apollo.py', formatter_class=RawTextHelpFormatter)
 
     apollo_version = "11182020"
     parser.add_argument('-v', '--version', action='version',
@@ -383,6 +467,9 @@ if __name__ == "__main__":
         '--ip', action="store", help="IP Address/Domain of Jailbroken iOS Device", required=True)
     gather_ios.add_argument('--port', action="store",
                             help="SSH/SCP Port of Jailbroken iOS Device", required=True)
+
+    gather_itunes = subparsers.add_parser(
+        'gather_itunes', help='Gather Files from iTunes uncompressed backup')
 
     extract = subparsers.add_parser(
         'extract', help='Extract Data using APOLLO Modules')
@@ -508,5 +595,5 @@ if __name__ == "__main__":
     except:
         pass
 
-    if subparser in ['gather_macos', 'gather_ios']:
+    if subparser in ['gather_macos', 'gather_ios', 'gather_itunes']:
         parse_module_definition(mod_info)
